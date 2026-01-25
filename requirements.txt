@@ -1,0 +1,30 @@
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+diffusers>=0.25.0
+transformers>=4.35.0
+accelerate>=0.25.0
+gradio>=4.0.0
+pillow>=10.0.0
+moviepy>=1.0.3
+safetensors>=0.4.0
+scipy>=1.10.0
+psutil>=5.9.0
+omegaconf>=2.3.0
+pyyaml>=6.0
+numpy>=1.24.0
+
+# Performance & Memory Optimization
+xformers>=0.0.23          # Memory-efficient attention mechanisms
+einops>=0.7.0             # Tensor operations (required by some models)
+
+# Quantization Support (optional, for low VRAM)
+bitsandbytes>=0.41.0      # 8-bit/4-bit quantization for models
+
+# Model Management & Utilities
+huggingface-hub>=0.20.0   # Better HuggingFace model management
+sentencepiece>=0.1.99     # Text processing for tokenizers
+click>=8.1.0              # CLI utilities
+
+# Development & Optional
+python-dotenv>=1.0.0      # Environment variable loading
