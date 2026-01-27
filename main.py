@@ -6,12 +6,16 @@ Main entry point with Gradio interface for image, audio, and video generation
 import logging
 import time
 import os
+import shutil
 import tempfile
-from typing import Optional, Tuple
+import datetime
+from typing import Optional, Tuple, List
 from pathlib import Path
 
 import gradio as gr
 import torch
+import numpy as np
+import scipy.io.wavfile
 from PIL import Image
 
 import config
@@ -29,6 +33,56 @@ device_manager = get_device_manager()
 
 # Store generator instances
 current_generators = {"image": None, "audio": None, "video": None}
+
+# Output directory
+OUTPUT_DIR = "outputs"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+
+def save_generated_file(
+    file_data, file_type: str, extension: str, metadata: dict = None
+) -> str:
+    """Save generated content to persistent storage."""
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Use part of seed if available, else random
+    unique_id = str(get_random_seed())[:8]
+    filename = f"{file_type}_{timestamp}_{unique_id}.{extension}"
+    filepath = os.path.join(OUTPUT_DIR, filename)
+
+    try:
+        if file_type == "image":
+            # file_data is PIL Image
+            file_data.save(filepath)
+        elif file_type == "audio":
+            # file_data is (sample_rate, audio_array)
+            sample_rate, audio_array = file_data
+            scipy.io.wavfile.write(filepath, sample_rate, audio_array)
+        elif file_type == "video":
+            # file_data is path to temp file
+            shutil.copy2(file_data, filepath)
+
+        logger.info(f"Saved {file_type} to {filepath}")
+        return filepath
+    except Exception as e:
+        logger.error(f"Failed to save file: {e}")
+        return None
+
+
+def get_gallery_files() -> List[str]:
+    """Get list of files in output directory sorted by creation time."""
+    files = []
+    if not os.path.exists(OUTPUT_DIR):
+        return []
+
+    for f in os.listdir(OUTPUT_DIR):
+        # Only show images in the gallery component
+        if f.lower().endswith((".png", ".jpg", ".jpeg")):
+            files.append(os.path.join(OUTPUT_DIR, f))
+
+    # Sort by modification time (newest first)
+    files.sort(key=os.path.getmtime, reverse=True)
+    return files
+
 
 logger.info("=" * 60)
 logger.info("Offline Multi-Modal AI Generator Started")
@@ -85,6 +139,11 @@ def generate_image(
             img2img_strength=img2img_strength,
         )
 
+        if image:
+            saved_path = save_generated_file(image, "image", "png")
+            if saved_path:
+                status += f"\nSaved to: {os.path.basename(saved_path)}"
+
         progress(1.0, desc="Complete!")
         return image, status
 
@@ -126,6 +185,11 @@ def generate_audio(
             temperature=temperature,
             seed=seed,
         )
+
+        if audio_data:
+            saved_path = save_generated_file(audio_data, "audio", "wav")
+            if saved_path:
+                status += f"\nSaved to: {os.path.basename(saved_path)}"
 
         progress(1.0, desc="Complete!")
         return audio_data, status
@@ -182,6 +246,12 @@ def generate_video(
                 )
                 if success:
                     status += f"\n{save_status}"
+
+                    # Save to persistent storage
+                    saved_path = save_generated_file(tmp.name, "video", "mp4")
+                    if saved_path:
+                        status += f"\nSaved to: {os.path.basename(saved_path)}"
+
                     # Return video path for Gradio Video widget
                     return tmp.name, status
                 else:
@@ -200,11 +270,13 @@ def toggle_interfaces(mode: str):
     image_visible = mode == "🖼️ Image"
     audio_visible = mode == "🎵 Audio"
     video_visible = mode == "🎬 Video"
+    gallery_visible = mode == "📂 Gallery"
 
     return (
         gr.update(visible=image_visible),
         gr.update(visible=audio_visible),
         gr.update(visible=video_visible),
+        gr.update(visible=gallery_visible),
     )
 
 
@@ -231,7 +303,13 @@ def build_ui():
         button_primary_background_fill="*primary_600",
     )
 
-    with gr.Blocks(theme=theme, title="Offline AI Generator") as demo:
+    css = """
+    @media (max-width: 768px) {
+        .gradio-container { padding: 10px !important; }
+    }
+    """
+
+    with gr.Blocks(theme=theme, title="Offline AI Generator", css=css) as demo:
         # Header
         gr.Markdown(
             """
@@ -245,7 +323,7 @@ def build_ui():
         # Mode selector
         with gr.Row():
             mode_selector = gr.Radio(
-                ["🖼️ Image", "🎵 Audio", "🎬 Video"],
+                ["🖼️ Image", "🎵 Audio", "🎬 Video", "📂 Gallery"],
                 value="🖼️ Image",
                 label="Generation Mode",
                 scale=1,
@@ -432,13 +510,39 @@ def build_ui():
                 label="Example Prompts",
             )
 
+        # ==================== GALLERY ====================
+        with gr.Column(visible=False) as gallery_interface:
+            gr.Markdown("### 📂 Gallery")
+
+            with gr.Row():
+                refresh_btn = gr.Button("🔄 Refresh Gallery")
+
+            gallery = gr.Gallery(
+                label="Generated Content",
+                show_label=False,
+                elem_id="gallery",
+                columns=[3],
+                rows=[2],
+                object_fit="contain",
+                height="auto",
+            )
+
+            refresh_btn.click(fn=get_gallery_files, inputs=None, outputs=gallery)
+            # Load gallery on start
+            demo.load(fn=get_gallery_files, inputs=None, outputs=gallery)
+
         # ==================== EVENT HANDLERS ====================
 
         # Mode toggle
         mode_selector.change(
             fn=toggle_interfaces,
             inputs=[mode_selector],
-            outputs=[image_interface, audio_interface, video_interface],
+            outputs=[
+                image_interface,
+                audio_interface,
+                video_interface,
+                gallery_interface,
+            ],
         )
 
         # Image generation
@@ -500,10 +604,21 @@ if __name__ == "__main__":
     logger.info("Open browser to: http://127.0.0.1:7860")
     logger.info("Press Ctrl+C to stop")
 
+    # Auth config
+    auth = None
+    if os.environ.get("GRADIO_USERNAME") and os.environ.get("GRADIO_PASSWORD"):
+        auth = (os.environ.get("GRADIO_USERNAME"), os.environ.get("GRADIO_PASSWORD"))
+        logger.info("Basic authentication enabled")
+
+    share = os.environ.get("GRADIO_SHARE", "False").lower() == "true"
+    if share:
+        logger.info("Sharing enabled")
+
     demo.launch(
-        server_name="127.0.0.1",
-        server_port=7860,
-        share=False,
+        server_name=os.environ.get("GRADIO_SERVER_NAME", "127.0.0.1"),
+        server_port=int(os.environ.get("GRADIO_SERVER_PORT", "7860")),
+        share=share,
+        auth=auth,
         enable_queue=True,
         analytics_enabled=False,  # Disable telemetry
     )
