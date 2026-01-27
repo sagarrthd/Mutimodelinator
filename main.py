@@ -619,6 +619,4 @@ if __name__ == "__main__":
         server_port=int(os.environ.get("GRADIO_SERVER_PORT", "7860")),
         share=share,
         auth=auth,
-        enable_queue=True,
-        analytics_enabled=False,  # Disable telemetry
     )
