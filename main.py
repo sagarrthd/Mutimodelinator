@@ -595,11 +595,13 @@ def build_ui():
     return demo
 
 
+# ==================== EXPORT FOR API ====================
+# Create demo object but don't launch it immediately
+logger.info("Building interface...")
+demo = build_ui()
+
 # ==================== LAUNCH ====================
 if __name__ == "__main__":
-    logger.info("Building interface...")
-    demo = build_ui()
-
     logger.info("Launching Gradio server...")
     logger.info("Open browser to: http://127.0.0.1:7860")
     logger.info("Press Ctrl+C to stop")
