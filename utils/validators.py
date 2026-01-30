@@ -3,9 +3,8 @@ Input validation and parameter bounds checking.
 Ensures all user inputs are safe and within acceptable ranges.
 """
 
-import re
-from typing import Tuple, Optional
 import logging
+from typing import Tuple
 
 logger = logging.getLogger(__name__)
 

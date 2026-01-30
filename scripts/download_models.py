@@ -1,15 +1,13 @@
 """Setup script for downloading models on first run."""
 
-import os
 import sys
-import logging
 from pathlib import Path
 
 # Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from utils import setup_logging, get_device_manager
-from config import IMAGE_MODELS, AUDIO_MODELS, VIDEO_MODELS
+from config import AUDIO_MODELS, IMAGE_MODELS, VIDEO_MODELS
+from utils import get_device_manager, setup_logging
 
 logger = setup_logging("setup.log")
 
@@ -35,12 +33,12 @@ def download_model(repo_id: str, description: str):
                 use_safetensors=True,
             )
             logger.info(f"✓ Downloaded: {repo_id}")
-            print(f"   ✓ Complete")
+            print("   ✓ Complete")
         except Exception:
             # Try as regular model
             model = AutoModel.from_pretrained(repo_id)
             logger.info(f"✓ Downloaded: {repo_id}")
-            print(f"   ✓ Complete")
+            print("   ✓ Complete")
 
     except Exception as e:
         logger.warning(f"Failed to download {repo_id}: {e}")

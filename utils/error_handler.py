@@ -7,7 +7,6 @@ import logging
 import sys
 import traceback
 from typing import Optional, Tuple
-from datetime import datetime
 
 # Configure logging
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

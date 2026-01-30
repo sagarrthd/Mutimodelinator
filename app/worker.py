@@ -1,6 +1,7 @@
-import os
 import asyncio
+
 from celery import Celery
+
 from app.config import REDIS_URL
 from app.email import send_email_async
 

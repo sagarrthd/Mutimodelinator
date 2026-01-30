@@ -1,43 +1,96 @@
+version: '3.8'
+
 services:
-  web:
+  gradio:
     build: .
+    container_name: multimodelinator-gradio
     ports:
       - "7860:7860"
+    volumes:
+      - ./outputs:/app/outputs
+      - hf-cache:/root/.cache/huggingface
+    environment:
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_THEME=default
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    command: python main.py
+
+  api:
+    build: .
+    container_name: multimodelinator-api
+    ports:
+      - "8000:8000"
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=sqlite:///./app.db
     volumes:
       - ./outputs:/app/outputs
-      - ./.cache:/root/.cache
+      - hf-cache:/root/.cache/huggingface
     depends_on:
       - redis
-    command: uvicorn app.api:app --host 0.0.0.0 --port 7860
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    command: uvicorn app.api:app --host 0.0.0.0 --port 8000
 
   worker:
     build: .
+    container_name: multimodelinator-worker
     command: celery -A app.worker.celery_app worker --loglevel=info
     environment:
       - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./outputs:/app/outputs
+      - hf-cache:/root/.cache/huggingface
     depends_on:
       - redis
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
 
   redis:
     image: redis:7
+    container_name: multimodelinator-redis
     ports:
       - "6379:6379"
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus
+    container_name: multimodelinator-prometheus
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana
+    container_name: multimodelinator-grafana
     ports:
       - "3000:3000"
     depends_on:
       - prometheus
+    restart: unless-stopped
+
+volumes:
+  hf-cache:

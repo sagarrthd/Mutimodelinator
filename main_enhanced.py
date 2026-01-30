@@ -4,20 +4,20 @@ Features: Modern UI, Smart Model Management, Output History, Performance Optimiz
 """
 
 import logging
-import torch
-import gradio as gr
-from typing import Optional, Tuple, Dict, Any
 from pathlib import Path
-import os
-from datetime import datetime
+from typing import Any, Dict, Optional, Tuple
+
+import gradio as gr
+import torch
+
+from config import AUDIO_MODELS, IMAGE_MODELS
+from utils.device_manager import DeviceManager
+from utils.error_handler import GenerationError
+from utils.model_manager import get_model_manager
 
 # Import our custom utilities
 from utils.output_manager import get_output_manager
-from utils.model_manager import get_model_manager, track_model_load
 from utils.ui_theme import create_custom_theme, get_custom_css
-from utils.device_manager import DeviceManager
-from utils.error_handler import GenerationError, logger as util_logger
-from config import IMAGE_MODELS, AUDIO_MODELS
 
 # Setup logging
 logging.basicConfig(
@@ -69,7 +69,7 @@ def generate_image(
             return None, f"❌ Error: Model '{model_name}' not found"
         
         # Load model
-        from diffusers import StableDiffusionPipeline, StableDiffusionXLPipeline, FluxPipeline
+        from diffusers import StableDiffusionPipeline
         
         model_key = f"image_{model_name}"
         
@@ -129,7 +129,7 @@ def generate_image(
             }
         )
         
-        logger.info(f"✓ Image generated successfully!")
+        logger.info("✓ Image generated successfully!")
         return result, f"✓ Image generated successfully!\n📁 Saved to: {output_path}"
         
     except GenerationError as e:
@@ -218,8 +218,9 @@ def generate_audio(
             audio_array = audio_values.cpu().numpy()[0]
         
         # Save audio
-        import scipy.io.wavfile as wavfile
         import tempfile
+
+        import scipy.io.wavfile as wavfile
         
         # Create temp file first
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
@@ -238,7 +239,7 @@ def generate_audio(
         # Clean up temp
         Path(temp_path).unlink(missing_ok=True)
         
-        logger.info(f"✓ Audio generated successfully!")
+        logger.info("✓ Audio generated successfully!")
         return output_path, f"✓ Audio generated successfully!\n📁 Saved to: {output_path}"
         
     except Exception as e:
@@ -593,7 +594,7 @@ if __name__ == "__main__":
     logger.info("🚀 MultiModelinator - Offline AI Generator (Enhanced)")
     logger.info("=" * 70)
     logger.info(f"Device: {device_manager.device.upper()}")
-    logger.info(f"Build UI...")
+    logger.info("Build UI...")
     
     demo = build_ui()
     

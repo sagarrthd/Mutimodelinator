@@ -1,14 +1,16 @@
 """Audio generation module for music and speech synthesis."""
 
 import logging
-import time
 import random
-from typing import Optional, Tuple, Any, Dict
+import time
+from typing import Any, Dict, Optional, Tuple
+
 import numpy as np
-import torch
+
 from utils.error_handler import InferenceError, handle_generation_error
 from utils.model_cache import run_inference
-from utils.validators import validate_prompt, validate_duration, validate_temperature
+from utils.validators import validate_duration, validate_prompt, validate_temperature
+
 from .base import BaseGenerator
 
 logger = logging.getLogger(__name__)

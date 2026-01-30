@@ -4,8 +4,9 @@ Minimal dependencies version for immediate testing
 """
 
 import logging
-import torch
+
 import gradio as gr
+import torch
 
 # ==================== SETUP LOGGING ====================
 logging.basicConfig(

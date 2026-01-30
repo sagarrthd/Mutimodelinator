@@ -3,12 +3,12 @@ Model Manager for intelligent model loading, caching, and lifecycle management.
 Prevents unnecessary model reloads and provides efficient resource management.
 """
 
-import logging
-import torch
-from typing import Optional, Dict, Any, Callable
-from pathlib import Path
-from functools import wraps
 import gc
+import logging
+from functools import wraps
+from typing import Any, Callable, Dict, Optional
+
+import torch
 
 logger = logging.getLogger(__name__)
 

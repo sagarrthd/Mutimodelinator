@@ -1,23 +1,21 @@
 """Unit tests for generator modules and core functions."""
 
-import pytest
-import torch
-import numpy as np
-from PIL import Image
 from unittest import mock
 
-from config import IMAGE_MODELS, AUDIO_MODELS, VIDEO_MODELS
-from generators import ImageGenerator, AudioGenerator, VideoGenerator
-from utils import (
-    validate_prompt,
-    validate_image_dimensions,
-    validate_steps,
-    validate_guidance_scale,
-    validate_seed,
-    validate_duration,
-    validate_all_image_params,
-)
+import numpy as np
+import pytest
+from PIL import Image
 
+from config import AUDIO_MODELS, IMAGE_MODELS, VIDEO_MODELS
+from generators import AudioGenerator, ImageGenerator, VideoGenerator
+from utils import (
+    validate_all_image_params,
+    validate_guidance_scale,
+    validate_image_dimensions,
+    validate_prompt,
+    validate_seed,
+    validate_steps,
+)
 
 # ==================== VALIDATION TESTS ====================
 
@@ -201,7 +199,7 @@ class TestIntegration:
         """Test that all modules import correctly."""
         import config
         import main
-        from generators import ImageGenerator, AudioGenerator, VideoGenerator
+        from generators import ImageGenerator
         from utils import get_device_manager
 
         assert config is not None

@@ -1,7 +1,8 @@
-import json
 import functools
+import json
+
 import redis
-from fastapi import Request, Response
+
 from app.config import REDIS_URL
 
 redis_client = redis.from_url(REDIS_URL)
