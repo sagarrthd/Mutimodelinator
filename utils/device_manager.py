@@ -4,9 +4,10 @@ Automatically configures torch for optimal performance based on available hardwa
 """
 
 import logging
-import torch
-from typing import Dict, Tuple
+from typing import Dict
+
 import psutil
+import torch
 
 logger = logging.getLogger(__name__)
 

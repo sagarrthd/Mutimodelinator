@@ -3,29 +3,23 @@ Production-grade Offline Multi-Modal AI Generator
 Main entry point with Gradio interface for image, audio, and video generation
 """
 
-import logging
-import time
+import datetime
 import os
 import shutil
 import tempfile
-import datetime
-from typing import Optional, Tuple, List
-from pathlib import Path
+from typing import List, Optional, Tuple
 
 import gradio as gr
-import torch
-import numpy as np
 import scipy.io.wavfile
 from PIL import Image
 
 import config
+from generators import AudioGenerator, ImageGenerator, VideoGenerator
 from utils import (
-    setup_logging,
     get_device_manager,
     handle_generation_error,
-    log_performance_metrics,
+    setup_logging,
 )
-from generators import ImageGenerator, AudioGenerator, VideoGenerator
 
 # ==================== SETUP ====================
 logger = setup_logging(log_file=config.LOG_FILE)

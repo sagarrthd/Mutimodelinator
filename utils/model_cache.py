@@ -4,7 +4,8 @@ Ensures only one model is loaded at a time, with smart caching.
 """
 
 import logging
-from typing import Optional, Type, Union
+from typing import Union
+
 import torch
 from diffusers import DiffusionPipeline
 from transformers import AutoProcessor

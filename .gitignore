@@ -97,3 +97,5 @@ secrets.py
 credentials.json
 api_keys.txt
 app.db
+.mypy_cache/
+.ruff_cache/

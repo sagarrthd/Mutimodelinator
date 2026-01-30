@@ -1,20 +1,23 @@
 from datetime import datetime, timedelta
 from typing import Optional
+
+from authlib.integrations.starlette_client import OAuth
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from starlette.config import Config
-from starlette.requests import Request
-from authlib.integrations.starlette_client import OAuth
 
 from app import models, schemas
 from app.config import (
-    SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES,
-    GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
-    GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET,
-    API_V1_STR
+    ALGORITHM,
+    API_V1_STR,
+    GITHUB_CLIENT_ID,
+    GITHUB_CLIENT_SECRET,
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    SECRET_KEY,
 )
 from app.database import get_db
 
