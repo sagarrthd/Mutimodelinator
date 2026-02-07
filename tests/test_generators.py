@@ -1,20 +1,16 @@
 """Unit tests for generator modules and core functions."""
 
 import pytest
-import torch
-import numpy as np
-from PIL import Image
 from unittest import mock
 
-from config import IMAGE_MODELS, AUDIO_MODELS, VIDEO_MODELS
-from generators import ImageGenerator, AudioGenerator, VideoGenerator
+from config import IMAGE_MODELS, AUDIO_MODELS, MUSIC_STUDIO_MODELS
+from generators import ImageGenerator, AudioGenerator, MusicStudioGenerator
 from utils import (
     validate_prompt,
     validate_image_dimensions,
     validate_steps,
     validate_guidance_scale,
     validate_seed,
-    validate_duration,
     validate_all_image_params,
 )
 
@@ -130,27 +126,33 @@ class TestAudioGenerator:
         assert generator.repo_id == config["repo_id"]
 
 
-class TestVideoGenerator:
-    """Test video generation."""
+class TestMusicStudioGenerator:
+    """Test music studio generation."""
 
     def test_generator_creation(self):
-        """Test creating a video generator."""
-        config = VIDEO_MODELS[list(VIDEO_MODELS.keys())[0]]
-        generator = VideoGenerator(config)
+        """Test creating a music studio generator."""
+        config = MUSIC_STUDIO_MODELS[list(MUSIC_STUDIO_MODELS.keys())[0]]
+        generator = MusicStudioGenerator(config)
         assert generator.repo_id == config["repo_id"]
 
-    def test_numpy_to_pil_conversion(self):
-        """Test converting numpy arrays to PIL frames."""
-        config = VIDEO_MODELS[list(VIDEO_MODELS.keys())[0]]
-        generator = VideoGenerator(config)
+    def test_build_prompt_includes_core_attributes(self):
+        """Test prompt builder contains major user options."""
+        config = MUSIC_STUDIO_MODELS[list(MUSIC_STUDIO_MODELS.keys())[0]]
+        generator = MusicStudioGenerator(config)
 
-        # Create fake numpy frames
-        fake_frames = np.random.randint(0, 256, (4, 256, 256, 3), dtype=np.uint8)
-        frames = generator._numpy_to_pil_frames(fake_frames)
+        prompt = generator._build_music_prompt(
+            genre="Jazz",
+            mood="Calm/Relaxing",
+            vocals="No Vocals (Instrumental)",
+            tempo_bpm=95,
+            key="F Major",
+            instruments=["Piano", "Bass"],
+            lyrics="",
+        )
 
-        assert len(frames) == 4
-        assert all(isinstance(f, Image.Image) for f in frames)
-        assert frames[0].size == (256, 256)
+        assert "jazz" in prompt.lower()
+        assert "f major" in prompt.lower()
+        assert "instrumental" in prompt.lower()
 
 
 # ==================== PERFORMANCE TESTS ====================
@@ -201,7 +203,7 @@ class TestIntegration:
         """Test that all modules import correctly."""
         import config
         import main
-        from generators import ImageGenerator, AudioGenerator, VideoGenerator
+        from generators import ImageGenerator, AudioGenerator, MusicStudioGenerator
         from utils import get_device_manager
 
         assert config is not None
