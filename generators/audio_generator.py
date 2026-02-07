@@ -68,18 +68,18 @@ class AudioGenerator(BaseGenerator):
             start_time = time.time()
 
             # Prepare inference kwargs based on model type
-            if "musicgen" in self.repo_id.lower():
-                # MusicGen parameters
+            if "ace-step" in self.repo_id.lower():
+                # ACE Step 1.5 parameters (Music generation)
                 inference_kwargs = {
-                    "descriptions": [prompt],
-                    "max_new_tokens": int(duration_seconds * 50),  # Approximate token count
+                    "prompt": prompt,
+                    "duration": duration_seconds,
                     "temperature": temperature,
                 }
-            elif "bark" in self.repo_id.lower():
-                # Bark parameters
+            elif "qwen3-tts" in self.repo_id.lower():
+                # Qwen3-TTS parameters (Speech generation)
                 inference_kwargs = {
                     "text": prompt,
-                    "voice_preset": "v2/en_speaker_6",  # Default voice
+                    "task": "speech-generation",
                 }
             else:
                 # Generic audio generation

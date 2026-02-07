@@ -1,13 +1,11 @@
 """
 Production-grade Offline Multi-Modal AI Generator
-Main entry point with Gradio interface for image, audio, and video generation
+Main entry point with Gradio interface for image and audio generation
 """
 
 import logging
 import time
 import os
-import shutil
-import tempfile
 import datetime
 from typing import Optional, Tuple, List
 from pathlib import Path
@@ -25,14 +23,14 @@ from utils import (
     handle_generation_error,
     log_performance_metrics,
 )
-from generators import ImageGenerator, AudioGenerator, VideoGenerator
+from generators import ImageGenerator, AudioGenerator, MusicStudioGenerator
 
 # ==================== SETUP ====================
 logger = setup_logging(log_file=config.LOG_FILE)
 device_manager = get_device_manager()
 
 # Store generator instances
-current_generators = {"image": None, "audio": None, "video": None}
+current_generators = {"image": None, "audio": None, "music_studio": None}
 
 # Output directory
 OUTPUT_DIR = "outputs"
@@ -53,13 +51,10 @@ def save_generated_file(
         if file_type == "image":
             # file_data is PIL Image
             file_data.save(filepath)
-        elif file_type == "audio":
+        elif file_type in ("audio", "music"):
             # file_data is (sample_rate, audio_array)
             sample_rate, audio_array = file_data
             scipy.io.wavfile.write(filepath, sample_rate, audio_array)
-        elif file_type == "video":
-            # file_data is path to temp file
-            shutil.copy2(file_data, filepath)
 
         logger.info(f"Saved {file_type} to {filepath}")
         return filepath
@@ -199,84 +194,85 @@ def generate_audio(
         return handle_generation_error(e, logger)
 
 
-def generate_video(
+
+def generate_music_studio(
     model_name: str,
     prompt: str,
-    frames: int,
-    fps: int,
-    input_image: Optional[Image.Image] = None,
-    motion_bucket_id: int = 127,
-    seed: int = -1,
+    preset: str,
+    genre: str,
+    mood: str,
+    vocals: str,
+    tempo_bpm: int,
+    duration: float,
+    key: str,
+    instruments: List[str],
+    lyrics: str,
+    seed: int,
     progress: gr.Progress = gr.Progress(),
-) -> Tuple[Optional[list], str]:
-    """Generate video from prompt or image."""
+) -> Tuple[Optional[Tuple], str]:
+    """Generate professional music with advanced controls."""
     try:
-        progress(0.1, desc="Loading model...")
+        progress(0.1, desc="Loading music model...")
 
-        if model_name not in config.VIDEO_MODELS:
+        if model_name not in config.MUSIC_STUDIO_MODELS:
             return None, f"❌ Model not found: {model_name}"
 
-        model_config = config.VIDEO_MODELS[model_name]
+        model_config = config.MUSIC_STUDIO_MODELS[model_name]
 
         # Create generator
-        generator = VideoGenerator(model_config)
-        current_generators["video"] = generator
+        generator = MusicStudioGenerator(model_config)
+        current_generators["music_studio"] = generator
 
         progress(0.3, desc="Initializing model...")
         generator.load_model()
 
-        progress(0.5, desc="Generating video...")
+        # Apply preset if selected
+        if preset and preset != "Custom":
+            preset_config = config.MUSIC_PRESETS.get(preset, {})
+            genre = preset_config.get("genre", genre)
+            mood = preset_config.get("mood", mood)
+            vocals = preset_config.get("vocals", vocals)
+            tempo_bpm = preset_config.get("tempo_bpm", tempo_bpm)
+            key = preset_config.get("key", key)
+            instruments = preset_config.get("instruments", instruments)
 
-        # Generate
-        frames_list, status = generator.generate(
-            prompt=prompt,
-            num_frames=frames,
-            fps=fps,
-            conditioning_image=input_image,
-            motion_bucket_id=motion_bucket_id,
+        progress(0.5, desc="Generating music...")
+
+        # Generate music with full control
+        audio_data, status = generator.generate_music(
+            prompt=prompt if prompt else "",
+            genre=genre,
+            mood=mood,
+            vocals=vocals,
+            tempo_bpm=tempo_bpm,
+            duration_seconds=duration,
+            key=key,
+            instruments=instruments,
+            lyrics=lyrics if lyrics else "",
             seed=seed,
         )
 
-        if frames_list:
-            progress(0.9, desc="Saving video...")
-            # Create temporary video file
-            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
-                success, save_status = generator.frames_to_video_file(
-                    frames_list, tmp.name, fps=fps
-                )
-                if success:
-                    status += f"\n{save_status}"
-
-                    # Save to persistent storage
-                    saved_path = save_generated_file(tmp.name, "video", "mp4")
-                    if saved_path:
-                        status += f"\nSaved to: {os.path.basename(saved_path)}"
-
-                    # Return video path for Gradio Video widget
-                    return tmp.name, status
-                else:
-                    return None, f"❌ {save_status}"
+        if audio_data:
+            saved_path = save_generated_file(audio_data, "music", "wav")
+            if saved_path:
+                status += f"\nSaved to: {os.path.basename(saved_path)}"
 
         progress(1.0, desc="Complete!")
-        return None, status
+        return audio_data, status
 
     except Exception as e:
-        logger.exception("Video generation error")
+        logger.exception("Music generation error")
         return handle_generation_error(e, logger)
+
 
 
 def toggle_interfaces(mode: str):
     """Toggle visibility of interface sections based on selected mode."""
-    image_visible = mode == "🖼️ Image"
-    audio_visible = mode == "🎵 Audio"
-    video_visible = mode == "🎬 Video"
-    gallery_visible = mode == "📂 Gallery"
-
     return (
-        gr.update(visible=image_visible),
-        gr.update(visible=audio_visible),
-        gr.update(visible=video_visible),
-        gr.update(visible=gallery_visible),
+        gr.update(visible=(mode == "🖼️ Image")),
+        gr.update(visible=(mode == "🎵 Audio")),
+        gr.update(visible=(mode == "🎸 Music Studio")),
+        gr.update(visible=(mode == "📂 Gallery")),
     )
 
 
@@ -316,14 +312,14 @@ def build_ui():
             # 🎨 Local Multi-Modal AI Generator
             **Fully offline • No telemetry • No API calls • No account needed**
             
-            Generate images, audio, and video using powerful open-source models running locally on your machine.
+            Generate images and audio using powerful open-source models running locally on your machine.
             """
         )
 
         # Mode selector
         with gr.Row():
             mode_selector = gr.Radio(
-                ["🖼️ Image", "🎵 Audio", "🎬 Video", "📂 Gallery"],
+                ["🖼️ Image", "🎵 Audio", "🎸 Music Studio", "📂 Gallery"],
                 value="🖼️ Image",
                 label="Generation Mode",
                 scale=1,
@@ -458,55 +454,97 @@ def build_ui():
                 label="Example Prompts",
             )
 
-        # ==================== VIDEO GENERATION ====================
-        with gr.Column(visible=False) as video_interface:
-            gr.Markdown("### 🎬 Video Generation")
-
+        # ==================== MUSIC STUDIO (SUNO-LIKE) ====================
+        with gr.Column(visible=False) as music_studio_interface:
+            gr.Markdown("### 🎸 Music Studio - Professional Music Generation")
+            gr.Markdown("*Create studio-quality music with full creative control*")
+            
             with gr.Row():
-                video_model = gr.Dropdown(
-                    choices=list(config.VIDEO_MODELS.keys()),
-                    value=list(config.VIDEO_MODELS.keys())[0],
-                    label="Model",
-                    info="Generate video from text or animate an image",
+                music_model = gr.Dropdown(
+                    choices=list(config.MUSIC_STUDIO_MODELS.keys()),
+                    value=list(config.MUSIC_STUDIO_MODELS.keys())[0] if config.MUSIC_STUDIO_MODELS else None,
+                    label="AI Model",
+                    info="HeartMuLa for vocals/lyrics, Stable Audio for fast generation",
                 )
-
+            
             with gr.Row():
-                video_prompt = gr.Textbox(
-                    lines=3,
-                    placeholder="A rotating golden sphere with reflective surface on dark background...",
-                    label="Prompt",
-                    info="Describe the video scene",
+                music_preset = gr.Dropdown(
+                    choices=["Custom"] + list(config.MUSIC_PRESETS.keys()),
+                    value="Custom",
+                    label="🎯 Quick Preset",
+                    info="Select a preset or use Custom for manual control",
                 )
-
+            
             with gr.Row():
-                video_input = gr.Image(
-                    type="pil",
-                    label="Input Image (required for img2vid, optional for txt2vid)",
-                    scale=1,
+                music_prompt = gr.Textbox(
+                    lines=2,
+                    placeholder="Describe your music (optional - will auto-generate from settings)...",
+                    label="Custom Prompt (Optional)",
+                    info="Leave empty to auto-generate from genre/mood settings",
                 )
-
+            
             with gr.Row():
-                video_frames = gr.Slider(8, 48, value=16, step=1, label="Frames")
-                video_fps = gr.Slider(4, 30, value=8, step=1, label="FPS")
-
+                with gr.Column():
+                    music_genre = gr.Dropdown(
+                        choices=config.MUSIC_GENRES,
+                        value="Pop",
+                        label="🎵 Genre",
+                    )
+                    music_mood = gr.Dropdown(
+                        choices=config.MUSIC_MOODS,
+                        value="Happy/Upbeat",
+                        label="💫 Mood",
+                    )
+                with gr.Column():
+                    music_vocals = gr.Dropdown(
+                        choices=config.MUSIC_VOCALS,
+                        value="No Vocals (Instrumental)",
+                        label="🎤 Vocals",
+                    )
+                    music_key = gr.Dropdown(
+                        choices=config.MUSIC_KEYS,
+                        value="C Major",
+                        label="🎹 Musical Key",
+                    )
+            
             with gr.Row():
-                video_motion = gr.Slider(
-                    1, 255, value=127, step=1, label="Motion Bucket ID (img2vid only)"
+                music_tempo = gr.Slider(
+                    40, 220, value=120, step=1,
+                    label="🥁 Tempo (BPM)",
                 )
-                video_seed = gr.Number(
-                    value=-1, label="Seed (-1 = random)", precision=0
+                music_duration = gr.Slider(
+                    10, 120, value=30, step=5,
+                    label="⏱️ Duration (seconds)",
                 )
-
+            
             with gr.Row():
-                video_generate_btn = gr.Button("Generate Video", variant="primary")
-
-            video_output = gr.Video(label="Generated Video")
-            video_status = gr.Textbox(label="Status", interactive=False, lines=4)
-
-            # Example prompts for video
+                music_instruments = gr.CheckboxGroup(
+                    choices=config.MUSIC_INSTRUMENTS,
+                    value=["Piano", "Drums", "Bass"],
+                    label="🎸 Instruments",
+                )
+            
+            with gr.Accordion("📝 Lyrics (Optional)", open=False):
+                music_lyrics = gr.Textbox(
+                    lines=4,
+                    placeholder="Enter custom lyrics here (only works with HeartMuLa model)...",
+                    label="Custom Lyrics",
+                )
+            
+            with gr.Row():
+                music_seed = gr.Number(value=-1, label="Seed (-1 = random)", precision=0)
+                music_random_btn = gr.Button("🎲 Random Seed", scale=0)
+            
+            with gr.Row():
+                music_generate_btn = gr.Button("🎵 Generate Music", variant="primary", size="lg")
+            
+            music_output = gr.Audio(label="Generated Music", type="numpy")
+            music_status = gr.Textbox(label="Status", interactive=False, lines=6)
+            
+            # Example prompts for music
             gr.Examples(
-                examples=config.EXAMPLE_PROMPTS["video"],
-                inputs=video_prompt,
+                examples=config.EXAMPLE_PROMPTS.get("music", []),
+                inputs=music_prompt,
                 label="Example Prompts",
             )
 
@@ -533,14 +571,13 @@ def build_ui():
 
         # ==================== EVENT HANDLERS ====================
 
-        # Mode toggle
         mode_selector.change(
             fn=toggle_interfaces,
             inputs=[mode_selector],
             outputs=[
                 image_interface,
                 audio_interface,
-                video_interface,
+                music_studio_interface,
                 gallery_interface,
             ],
         )
@@ -577,19 +614,25 @@ def build_ui():
             outputs=[audio_output, audio_status],
         )
 
-        # Video generation
-        video_generate_btn.click(
-            fn=generate_video,
+        # Music Studio generation
+        music_random_btn.click(fn=get_random_seed, outputs=music_seed)
+        music_generate_btn.click(
+            fn=generate_music_studio,
             inputs=[
-                video_model,
-                video_prompt,
-                video_frames,
-                video_fps,
-                video_input,
-                video_motion,
-                video_seed,
+                music_model,
+                music_prompt,
+                music_preset,
+                music_genre,
+                music_mood,
+                music_vocals,
+                music_tempo,
+                music_duration,
+                music_key,
+                music_instruments,
+                music_lyrics,
+                music_seed,
             ],
-            outputs=[video_output, video_status],
+            outputs=[music_output, music_status],
         )
 
     return demo

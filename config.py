@@ -54,63 +54,232 @@ IMAGE_MODELS = {
 
 # ==================== AUDIO GENERATION MODELS ====================
 AUDIO_MODELS = {
-    "MusicGen Medium (Music, 6GB VRAM)": {
-        "repo_id": "facebook/musicgen-medium",
+    "ACE Step 1.5 (Music + Lyrics, High Quality)": {
+        "repo_id": "ACE-Step/Ace-Step1.5",
         "task": "text-to-audio",
-        "vram_estimate": 6,
-        "max_duration": 30,
-        "sample_rate": 16000,
+        "vram_estimate": 12,
+        "max_duration": 60,
+        "sample_rate": 44100,
     },
-    "MusicGen Small (Music, Fast, 3GB VRAM)": {
-        "repo_id": "facebook/musicgen-small",
-        "task": "text-to-audio",
-        "vram_estimate": 3,
-        "max_duration": 30,
-        "sample_rate": 16000,
-    },
-    "Bark (Speech + SFX, 5GB VRAM)": {
-        "repo_id": "suno/bark",
+    "Qwen3-TTS 1.7B (Speech, Multilingual)": {
+        "repo_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         "task": "text-to-speech",
-        "vram_estimate": 5,
-        "max_duration": 15,
-        "sample_rate": 24000,
-    },
-    "Bark Small (Speech, Fast, 3GB VRAM)": {
-        "repo_id": "suno/bark-small",
-        "task": "text-to-speech",
-        "vram_estimate": 3,
-        "max_duration": 15,
+        "vram_estimate": 8,
+        "max_duration": 30,
         "sample_rate": 24000,
     },
 }
 
-# ==================== VIDEO GENERATION MODELS ====================
-VIDEO_MODELS = {
-    "Stable Video Diffusion XT (img2vid, 16GB VRAM)": {
-        "repo_id": "stabilityai/stable-video-diffusion-img2vid-xt",
-        "pipeline_class": "StableVideoDiffusionPipeline",
-        "type": "image-to-video",
-        "vram_estimate": 16,
-        "max_frames": 25,
-        "fps": 6,
+# ==================== MUSIC STUDIO MODELS (SUNO-LIKE) ====================
+# Ordered by VRAM requirement (lowest first for easier selection)
+MUSIC_STUDIO_MODELS = {
+    "MusicGen Small (Low VRAM, 4GB)": {
+        "repo_id": "facebook/musicgen-small",
+        "task": "music-generation",
+        "vram_estimate": 4,
+        "max_duration": 30,
+        "sample_rate": 32000,
+        "supports_lyrics": False,
+        "supports_vocals": False,
+        "supports_reference": True,
+        "quality": "good",
+        "description": "Lightweight music generator. Great for low-VRAM systems.",
     },
-    "Text-to-Video MS 1.7B (txt2vid, 12GB VRAM)": {
-        "repo_id": "damo-vilab/text-to-video-ms-1.7b",
-        "pipeline_class": "DiffusionPipeline",
-        "type": "text-to-video",
-        "vram_estimate": 12,
-        "max_frames": 16,
-        "fps": 8,
+    "MusicGen Medium (Balanced, 6GB)": {
+        "repo_id": "facebook/musicgen-medium",
+        "task": "music-generation",
+        "vram_estimate": 6,
+        "max_duration": 30,
+        "sample_rate": 32000,
+        "supports_lyrics": False,
+        "supports_vocals": False,
+        "supports_reference": True,
+        "quality": "high",
+        "description": "Balanced quality and speed. Good for 6GB+ VRAM systems.",
     },
-    "ZeroScope V2 XL (txt2vid, 10GB VRAM)": {
-        "repo_id": "cerspense/zeroscope_v2_XL",
-        "pipeline_class": "DiffusionPipeline",
-        "type": "text-to-video",
+    "Stable Audio Open (Fast, 8GB)": {
+        "repo_id": "stabilityai/stable-audio-open-small",
+        "task": "music-generation",
+        "vram_estimate": 8,
+        "max_duration": 47,
+        "sample_rate": 44100,
+        "supports_lyrics": False,
+        "supports_vocals": False,
+        "supports_reference": False,
+        "quality": "high",
+        "description": "Fast instrumental generation. Great for background music.",
+    },
+    "Qwen3-TTS 1.7B (Speech, 8GB)": {
+        "repo_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "task": "text-to-speech",
+        "vram_estimate": 8,
+        "max_duration": 30,
+        "sample_rate": 24000,
+        "supports_lyrics": True,
+        "supports_vocals": True,
+        "supports_reference": False,
+        "quality": "high",
+        "description": "Multilingual speech synthesis for voice-overs.",
+    },
+    "MusicGen Large (Quality, 10GB)": {
+        "repo_id": "facebook/musicgen-large",
+        "task": "music-generation",
         "vram_estimate": 10,
-        "max_frames": 24,
-        "fps": 8,
+        "max_duration": 30,
+        "sample_rate": 32000,
+        "supports_lyrics": False,
+        "supports_vocals": False,
+        "supports_reference": True,
+        "quality": "high",
+        "description": "High quality with melody conditioning.",
+    },
+    "ACE Step 1.5 (Vocals + Lyrics, 12GB)": {
+        "repo_id": "ACE-Step/Ace-Step1.5",
+        "task": "music-generation",
+        "vram_estimate": 12,
+        "max_duration": 60,
+        "sample_rate": 44100,
+        "supports_lyrics": True,
+        "supports_vocals": True,
+        "supports_reference": True,
+        "quality": "commercial",
+        "description": "Commercial-grade with vocals and lyrics support.",
+    },
+    "HeartMuLa 3B (Studio, 14GB)": {
+        "repo_id": "HeartMuLa/HeartMuLa-oss-3B",
+        "task": "music-generation",
+        "vram_estimate": 14,
+        "max_duration": 120,
+        "sample_rate": 44100,
+        "supports_lyrics": True,
+        "supports_vocals": True,
+        "supports_reference": True,
+        "quality": "studio",
+        "description": "Studio-grade music comparable to Suno v5.",
     },
 }
+
+# ==================== MUSIC GENERATION PARAMETERS ====================
+MUSIC_GENRES = [
+    "Pop", "Rock", "Hip-Hop", "Electronic/EDM", "Jazz", "Classical",
+    "Country", "R&B/Soul", "Blues", "Reggae", "Metal", "Folk",
+    "Latin", "K-Pop", "Indie", "Punk", "Disco", "Funk",
+    "Ambient", "Lo-fi", "Trap", "House", "Techno", "Dubstep"
+]
+
+MUSIC_MOODS = [
+    "Energetic", "Calm/Relaxing", "Happy/Upbeat", "Sad/Melancholic",
+    "Aggressive", "Romantic", "Epic/Cinematic", "Dark/Mysterious",
+    "Dreamy", "Nostalgic", "Triumphant", "Chill", "Intense",
+    "Playful", "Peaceful", "Dramatic"
+]
+
+MUSIC_VOCALS = [
+    "No Vocals (Instrumental)",
+    "Male Vocals",
+    "Female Vocals",
+    "Mixed Vocals (Male & Female)",
+    "Choir/Group Vocals",
+    "Rap/Spoken Word",
+    "Harmonized Vocals"
+]
+
+MUSIC_INSTRUMENTS = [
+    "Guitar (Acoustic)", "Guitar (Electric)", "Piano", "Synthesizer",
+    "Drums", "Bass", "Strings (Orchestra)", "Saxophone", "Trumpet",
+    "Violin", "Flute", "Cello", "Harp", "Organ", "Banjo",
+    "Ukulele", "Harmonica", "Accordion", "Tabla", "Sitar"
+]
+
+MUSIC_TEMPOS = {
+    "Very Slow (Largo)": (40, 60),
+    "Slow (Adagio)": (60, 80),
+    "Moderate (Andante)": (80, 100),
+    "Medium (Moderato)": (100, 120),
+    "Fast (Allegro)": (120, 140),
+    "Very Fast (Presto)": (140, 180),
+    "Extremely Fast": (180, 220)
+}
+
+MUSIC_KEYS = [
+    "C Major", "C Minor", "D Major", "D Minor", "E Major", "E Minor",
+    "F Major", "F Minor", "G Major", "G Minor", "A Major", "A Minor",
+    "B Major", "B Minor", "C# Major", "C# Minor", "F# Major", "F# Minor"
+]
+
+MUSIC_STRUCTURES = {
+    "Simple": ["Intro", "Verse", "Chorus", "Outro"],
+    "Standard": ["Intro", "Verse 1", "Chorus", "Verse 2", "Chorus", "Bridge", "Chorus", "Outro"],
+    "Extended": ["Intro", "Verse 1", "Pre-Chorus", "Chorus", "Verse 2", "Pre-Chorus", "Chorus", "Bridge", "Final Chorus", "Outro"],
+    "Custom": []  # User-defined
+}
+
+DEFAULT_MUSIC_PARAMS = {
+    "genre": "Pop",
+    "mood": "Happy/Upbeat",
+    "vocals": "No Vocals (Instrumental)",
+    "tempo_bpm": 120,
+    "duration_seconds": 30,
+    "key": "C Major",
+    "structure": "Simple",
+    "instruments": ["Piano", "Drums", "Bass"],
+    "production_quality": "High",
+    "seed": -1,
+}
+
+# ==================== MUSIC GENERATION PRESETS ====================
+MUSIC_PRESETS = {
+    "Epic Orchestral": {
+        "genre": "Classical",
+        "mood": "Epic/Cinematic",
+        "vocals": "Choir/Group Vocals",
+        "instruments": ["Strings (Orchestra)", "Trumpet", "Drums"],
+        "tempo_bpm": 100,
+        "key": "D Minor"
+    },
+    "Chill Lo-fi Study": {
+        "genre": "Lo-fi",
+        "mood": "Calm/Relaxing",
+        "vocals": "No Vocals (Instrumental)",
+        "instruments": ["Piano", "Bass", "Drums"],
+        "tempo_bpm": 80,
+        "key": "A Minor"
+    },
+    "Summer Pop Hit": {
+        "genre": "Pop",
+        "mood": "Happy/Upbeat",
+        "vocals": "Female Vocals",
+        "instruments": ["Guitar (Acoustic)", "Piano", "Drums"],
+        "tempo_bpm": 125,
+        "key": "G Major"
+    },
+    "Dark Trap Beat": {
+        "genre": "Trap",
+        "mood": "Dark/Mysterious",
+        "vocals": "Rap/Spoken Word",
+        "instruments": ["Synthesizer", "Bass", "Drums"],
+        "tempo_bpm": 140,
+        "key": "C Minor"
+    },
+    "Romantic Jazz": {
+        "genre": "Jazz",
+        "mood": "Romantic",
+        "vocals": "No Vocals (Instrumental)",
+        "instruments": ["Piano", "Saxophone", "Bass", "Drums"],
+        "tempo_bpm": 90,
+        "key": "F Major"
+    },
+    "EDM Festival Anthem": {
+        "genre": "Electronic/EDM",
+        "mood": "Energetic",
+        "vocals": "No Vocals (Instrumental)",
+        "instruments": ["Synthesizer", "Drums", "Bass"],
+        "tempo_bpm": 128,
+        "key": "A Minor"
+    }
+}
+
+
 
 # ==================== DEVICE SETTINGS ====================
 DEVICE_CONFIG = {
@@ -137,12 +306,6 @@ DEFAULT_AUDIO_PARAMS = {
     "seed": -1,
 }
 
-DEFAULT_VIDEO_PARAMS = {
-    "num_frames": 16,
-    "fps": 8,
-    "motion_bucket_id": 127,
-    "seed": -1,
-}
 
 # ==================== UI CONFIGURATION ====================
 GRADIO_THEME_CONFIG = {
@@ -170,23 +333,22 @@ EXAMPLE_PROMPTS = {
         "Abstract geometric patterns with iridescent colors and chrome surfaces",
     ],
     "audio": [
-        "Epic orchestral music with dramatic strings and powerful drums",
-        "Ambient electronic lofi beats with synthesizers and chill vibes",
-        "Jazz ensemble with saxophone, upright bass, and drums in a classic club",
-        "Nature sounds: rain on leaves with distant thunder",
-        "Upbeat pop music with catchy melody and modern production",
+        "ACE Step: A high-energy J-pop track with female vocals about a summer adventure",
+        "Qwen TTS: Welcome to the future of multi-modal artificial intelligence.",
+        "ACE Step: Calm acoustic guitar melody with soft background humming",
+        "Qwen TTS: The quick brown fox jumps over the lazy dog in a cheerful tone.",
+        "ACE Step: Epic cinematic orchestral music with rhythmic chanting",
     ],
-    "video": [
-        "A rotating golden sphere with reflective surface on dark background",
-        "Ocean waves crashing on a sunny beach with seagulls flying",
-        "Abstract particles flowing and morphing into geometric shapes",
-        "A person walking through a forest with dappled sunlight",
-        "Swirling galaxy with stars and nebula clouds",
+    "music": [
+        "Upbeat summer pop song with catchy chorus and female vocals",
+        "Dark atmospheric trap beat with heavy 808 bass",
+        "Chill lo-fi hip hop beat perfect for studying",
+        "Epic orchestral cinematic music for movie trailers",
+        "Romantic jazz piano with soft saxophone accompaniment",
+        "Energetic EDM festival anthem with synth drops",
     ],
 }
 
-# ==================== NEGATIVE PROMPTS ====================
 NEGATIVE_PROMPT_TEMPLATES = {
     "image": "blurry, low quality, distorted, ugly, bad anatomy, worst quality, artifacts",
-    "video": "static, jerky, blurry motion, inconsistent",
 }
