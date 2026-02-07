@@ -110,6 +110,12 @@ class AudioGenerator(BaseGenerator):
                 audio = audio[np.newaxis, :]  # Add channel dimension
 
             sample_rate = self.model_config.get("sample_rate", 16000)
+            if sample_rate <= 0:
+                logger.warning(
+                    "Invalid sample_rate=%s in model config. Falling back to 16000 Hz.",
+                    sample_rate,
+                )
+                sample_rate = 16000
             duration = time.time() - start_time
             self._record_generation_time(duration)
 
